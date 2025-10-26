@@ -1,43 +1,48 @@
 // app/_layout.tsx
-import { Tabs } from "expo-router";
-import { MaterialIcons } from "@expo/vector-icons";
+import React, { useEffect, useState } from "react";
+import { Slot, useRouter } from "expo-router";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "../firebaseConfig";
+import { View, ActivityIndicator } from "react-native";
 
-export default function Layout() {
-  return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: "#007bff",
-        tabBarStyle: { backgroundColor: "#fff", borderTopWidth: 0.3 },
-      }}
-    >
-      <Tabs.Screen
-        name="map"
-        options={{
-          title: "Carte",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="map" size={size} color={color} />
-          ),
+export default function RootLayout() {
+  const [initializing, setInitializing] = useState(true);
+  const [user, setUser] = useState<any>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setInitializing(false);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    if (initializing) return;
+
+    if (user) {
+      router.replace("/(tabs)/home");
+    } else {
+      router.replace("/");
+    }
+  }, [user, initializing]);
+
+  if (initializing) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "white",
         }}
-      />
-      <Tabs.Screen
-        name="my-addresses"
-        options={{
-          title: "Mes adresses",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="place" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profil",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="person" size={size} color={color} />
-          ),
-        }}
-      />
-    </Tabs>
-  );
+      >
+        <ActivityIndicator size="large" color="#007bff" />
+      </View>
+    );
+  }
+
+  return <Slot />;
 }

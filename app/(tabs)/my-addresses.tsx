@@ -17,7 +17,7 @@ import {
   deleteDoc,
   doc,
 } from "firebase/firestore";
-import { db, auth } from "../firebaseConfig";
+import { db, auth } from "../../firebaseConfig";
 import { useRouter } from "expo-router";
 
 export default function MyAddresses() {
@@ -71,7 +71,7 @@ export default function MyAddresses() {
   // 🔹 Ouvrir la carte sur une adresse précise
   const goToMap = (latitude: number, longitude: number, name: string) => {
     router.push({
-      pathname: "/map",
+      pathname: "/(tabs)/map",
       params: { latitude: latitude.toString(), longitude: longitude.toString(), name },
     });
   };

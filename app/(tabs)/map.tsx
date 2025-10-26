@@ -1,4 +1,4 @@
-// app/map.tsx
+// app/(tabs)/map.tsx
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -12,14 +12,14 @@ import {
   Switch,
   Image,
 } from "react-native";
-import MapView, { Marker, MapPressEvent } from "react-native-maps";
+import MapView, { Marker, MapPressEvent, Callout } from "react-native-maps";
 import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
 import { signOut } from "firebase/auth";
-import { collection, addDoc, getDocs } from "firebase/firestore";
+import { collection, addDoc, getDocs , where, or , query } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { auth, db, storage } from "../firebaseConfig";
-import { useRouter } from "expo-router";
+import { auth, db, storage } from "../../firebaseConfig";
+import { useRouter, useLocalSearchParams } from "expo-router";
 
 export default function MapScreen() {
   const [region, setRegion] = useState<any>(null);
@@ -31,10 +31,19 @@ export default function MapScreen() {
   const [image, setImage] = useState<string | null>(null);
   const [isPublic, setIsPublic] = useState(false);
   const router = useRouter();
+  const params = useLocalSearchParams<{ latitude?: string; longitude?: string; name?: string }>();
 
-  // 🔹 Récupère la position actuelle et charge les adresses
+  // 🔹 Récupère la position actuelle ou celle d'une adresse cliquée
   useEffect(() => {
     (async () => {
+      const lat = params?.latitude ? parseFloat(params.latitude as string) : undefined;
+      const lon = params?.longitude ? parseFloat(params.longitude as string) : undefined;
+
+      if (typeof lat === "number" && !Number.isNaN(lat) && typeof lon === "number" && !Number.isNaN(lon)) {
+        setRegion({ latitude: lat, longitude: lon, latitudeDelta: 0.01, longitudeDelta: 0.01 });
+        return;
+      }
+
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
         Alert.alert("Permission refusée", "L’accès à la localisation est nécessaire.");
@@ -51,26 +60,42 @@ export default function MapScreen() {
     })();
 
     loadAddresses();
-  }, []);
+  }, [params?.latitude, params?.longitude]);
 
-  // 🔹 Récupère toutes les adresses depuis Firestore
-  const loadAddresses = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "addresses"));
-      const data = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setMarkers(data);
-    } catch (error) {
-      console.error("Erreur lors du chargement :", error);
-    }
-  };
+// 🔹 Charge uniquement les adresses visibles pour l'utilisateur
+const loadAddresses = async () => {
+  try {
+    const currentUser = auth.currentUser?.email;
+    console.log("👤 Utilisateur actuel :", currentUser); // 👈 ici
 
-  // 🔹 Quand on appuie sur la carte → prépare à ajouter une adresse
+    if (!currentUser) return;
+
+    const addressesRef = collection(db, "addresses");
+
+    // 🔍 On veut : (isPublic == true) OU (user == currentUser)
+    const q = query(
+      addressesRef,
+      or(
+        where("isPublic", "==", true),
+        where("user", "==", currentUser)
+      )
+    );
+
+    const querySnapshot = await getDocs(q);
+    const data = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    setMarkers(data);
+  } catch (error) {
+    console.error("Erreur lors du chargement :", error);
+  }
+};
+
+  // 🔹 Clique sur la carte → prépare ajout d'adresse
   const handleAddMarker = (e: MapPressEvent) => {
     setSelectedCoord(e.nativeEvent.coordinate);
     setModalVisible(true);
   };
 
-  // 🔹 Sélectionne une image locale depuis la galerie
+  // 🔹 Sélection d’image
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -83,7 +108,7 @@ export default function MapScreen() {
     }
   };
 
-  // 🔹 Sauvegarde une adresse dans Firestore + upload image dans Storage
+  // 🔹 Sauvegarde l’adresse + image
   const saveAddress = async () => {
     if (!name.trim()) {
       Alert.alert("Erreur", "Veuillez entrer un nom d’adresse.");
@@ -93,7 +118,6 @@ export default function MapScreen() {
     let imageUrl = "";
 
     try {
-      // Upload de la photo (si sélectionnée)
       if (image) {
         const response = await fetch(image);
         const blob = await response.blob();
@@ -103,7 +127,6 @@ export default function MapScreen() {
         imageUrl = await getDownloadURL(storageRef);
       }
 
-      // Enregistrement Firestore
       await addDoc(collection(db, "addresses"), {
         name,
         description: desc,
@@ -130,17 +153,15 @@ export default function MapScreen() {
   // 🔹 Déconnexion
   const handleLogout = async () => {
     await signOut(auth);
-    router.push("/");
+    router.replace("/"); // ✅ renvoie vers la page de connexion
   };
 
   if (!region)
-    return (
-      <Text style={{ textAlign: "center", marginTop: 50 }}>Chargement de la carte...</Text>
-    );
+    return <Text style={{ textAlign: "center", marginTop: 50 }}>Chargement de la carte...</Text>;
 
   return (
     <View style={styles.container}>
-      {/* 🌍 Carte Google Maps */}
+      {/* 🌍 Carte */}
       <MapView style={styles.map} region={region} onPress={handleAddMarker}>
         {markers.map((marker) => (
           <Marker
@@ -149,9 +170,31 @@ export default function MapScreen() {
               latitude: marker.latitude,
               longitude: marker.longitude,
             }}
-            title={marker.name}
-            description={marker.description}
-          />
+          >
+            {/* 📸 Si image → photo à la place du pin */}
+            {marker.imageUrl ? (
+              <Image
+                source={{ uri: marker.imageUrl }}
+                style={styles.markerImage}
+              />
+            ) : (
+              <Image
+                source={require("../../assets/images/icon.png")}
+                style={styles.markerImage}
+              />
+            )}
+
+            {/* 🏷️ Info-bulle au clic */}
+            <Callout>
+              <View style={{ maxWidth: 150 }}>
+                <Text style={{ fontWeight: "bold" }}>{marker.name}</Text>
+                <Text>{marker.description}</Text>
+                <Text style={{ fontStyle: "italic", color: "#555" }}>
+                  {marker.isPublic ? "🌍 Publique" : "🔒 Privée"}
+                </Text>
+              </View>
+            </Callout>
+          </Marker>
         ))}
       </MapView>
 
@@ -160,7 +203,7 @@ export default function MapScreen() {
         <Text style={styles.logoutText}>Déconnexion</Text>
       </TouchableOpacity>
 
-      {/* 🏠 Modale d’ajout d’adresse */}
+      {/* 🏠 Modale d’ajout */}
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
@@ -168,6 +211,7 @@ export default function MapScreen() {
 
             <TextInput
               placeholder="Nom de l’adresse"
+              placeholderTextColor="#999"
               value={name}
               onChangeText={setName}
               style={styles.input}
@@ -175,18 +219,17 @@ export default function MapScreen() {
 
             <TextInput
               placeholder="Description"
+              placeholderTextColor="#999"
               value={desc}
               onChangeText={setDesc}
               style={styles.input}
             />
 
-            {/* 🌍 Switch Public/Privé */}
             <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 10 }}>
               <Text>Adresse publique ? </Text>
               <Switch value={isPublic} onValueChange={setIsPublic} />
             </View>
 
-            {/* 📸 Sélection d’image */}
             <Button title="Choisir une photo" onPress={pickImage} />
             {image && (
               <View style={{ alignItems: "center", marginVertical: 8 }}>
@@ -195,7 +238,6 @@ export default function MapScreen() {
               </View>
             )}
 
-            {/* ✅ Enregistrer ou annuler */}
             <Button title="Enregistrer" onPress={saveAddress} />
             <Button title="Annuler" onPress={() => setModalVisible(false)} color="red" />
           </View>
@@ -209,6 +251,17 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
+  markerImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: "white",
+    shadowColor: "#000",
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 4,
+  },
   logoutBtn: {
     position: "absolute",
     top: 40,
@@ -237,6 +290,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 10,
     marginBottom: 10,
+    color: "black",
   },
   preview: { width: 120, height: 120, borderRadius: 10, marginTop: 10 },
 });
