@@ -21,15 +21,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="my-addresses"
-        options={{
-          title: "Mes adresses",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="place" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="profile"
         options={{
           title: "Profile",

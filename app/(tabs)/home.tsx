@@ -1,4 +1,4 @@
-// app/(tabs)/map.tsx
+﻿// app/(tabs)/map.tsx
 import React, { useEffect, useState } from "react";
 import {
   View,
@@ -33,7 +33,7 @@ export default function MapScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ latitude?: string; longitude?: string; name?: string }>();
 
-  // 🔹 Récupère la position actuelle ou celle d'une adresse cliquée
+  // ðŸ”¹ RÃ©cupÃ¨re la position actuelle ou celle d'une adresse cliquÃ©e
   useEffect(() => {
     (async () => {
       const lat = params?.latitude ? parseFloat(params.latitude as string) : undefined;
@@ -46,7 +46,7 @@ export default function MapScreen() {
 
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== "granted") {
-        Alert.alert("Permission refusée", "L’accès à la localisation est nécessaire.");
+        Alert.alert("Permission refusÃ©e", "Lâ€™accÃ¨s Ã  la localisation est nÃ©cessaire.");
         return;
       }
 
@@ -64,16 +64,16 @@ export default function MapScreen() {
 
 const loadAddresses = async () => {
   try {
-    const currentUser = auth.currentUser?.email;
+    const currentUser = auth.currentUser?.email?.toLowerCase();
     if (!currentUser) return;
 
     const addressesRef = collection(db, "addresses");
 
-    // 1️⃣ Adresses publiques
+    // 1ï¸âƒ£ Adresses publiques
     const publicSnap = await getDocs(query(addressesRef, where("isPublic", "==", true)));
     const publicData = publicSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-    // 2️⃣ Adresses privées de l'utilisateur
+    // 2ï¸âƒ£ Adresses privÃ©es de l'utilisateur
     const privateSnap = await getDocs(query(addressesRef, where("user", "==", currentUser)));
     const privateData = privateSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
@@ -87,13 +87,13 @@ const loadAddresses = async () => {
 
 
 
-  // 🔹 Clique sur la carte → prépare ajout d'adresse
+  // ðŸ”¹ Clique sur la carte â†’ prÃ©pare ajout d'adresse
   const handleAddMarker = (e: MapPressEvent) => {
     setSelectedCoord(e.nativeEvent.coordinate);
     setModalVisible(true);
   };
 
-  // 🔹 Sélection d’image
+  // ðŸ”¹ SÃ©lection dâ€™image
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -106,10 +106,10 @@ const loadAddresses = async () => {
     }
   };
 
-  // 🔹 Sauvegarde l’adresse + image
+  // ðŸ”¹ Sauvegarde lâ€™adresse + image
   const saveAddress = async () => {
     if (!name.trim()) {
-      Alert.alert("Erreur", "Veuillez entrer un nom d’adresse.");
+      Alert.alert("Erreur", "Veuillez entrer un nom dâ€™adresse.");
       return;
     }
 
@@ -131,11 +131,11 @@ const loadAddresses = async () => {
         latitude: selectedCoord.latitude,
         longitude: selectedCoord.longitude,
         imageUrl,
-        user: auth.currentUser?.email || "inconnu",
+        user: (auth.currentUser?.email || "inconnu")?.toLowerCase(),
         isPublic,
       });
 
-      Alert.alert("Succès", "Adresse ajoutée !");
+      Alert.alert("SuccÃ¨s", "Adresse ajoutÃ©e !");
       setModalVisible(false);
       setName("");
       setDesc("");
@@ -143,15 +143,15 @@ const loadAddresses = async () => {
       setIsPublic(false);
       loadAddresses();
     } catch (error) {
-      console.error("Erreur lors de l’ajout :", error);
-      Alert.alert("Erreur", "Impossible d’ajouter l’adresse.");
+      console.error("Erreur lors de lâ€™ajout :", error);
+      Alert.alert("Erreur", "Impossible dâ€™ajouter lâ€™adresse.");
     }
   };
 
-  // 🔹 Déconnexion
+  // ðŸ”¹ DÃ©connexion
   const handleLogout = async () => {
     await signOut(auth);
-    router.replace("/"); // ✅ renvoie vers la page de connexion
+    router.replace("/"); // âœ… renvoie vers la page de connexion
   };
 
   if (!region)
@@ -159,7 +159,7 @@ const loadAddresses = async () => {
 
   return (
     <View style={styles.container}>
-      {/* 🌍 Carte */}
+      {/* ðŸŒ Carte */}
       <MapView style={styles.map} region={region} onPress={handleAddMarker}>
         {markers.map((marker) => (
           <Marker
@@ -169,7 +169,7 @@ const loadAddresses = async () => {
               longitude: marker.longitude,
             }}
           >
-            {/* 📸 Si image → photo à la place du pin */}
+            {/* ðŸ“¸ Si image â†’ photo Ã  la place du pin */}
             {marker.imageUrl ? (
               <Image
                 source={{ uri: marker.imageUrl }}
@@ -182,13 +182,13 @@ const loadAddresses = async () => {
               />
             )}
 
-            {/* 🏷️ Info-bulle au clic */}
+            {/* ðŸ·ï¸ Info-bulle au clic */}
             <Callout>
               <View style={{ maxWidth: 150 }}>
                 <Text style={{ fontWeight: "bold" }}>{marker.name}</Text>
                 <Text>{marker.description}</Text>
                 <Text style={{ fontStyle: "italic", color: "#555" }}>
-                  {marker.isPublic ? "🌍 Publique" : "🔒 Privée"}
+                  {marker.isPublic ? "ðŸŒ Publique" : "ðŸ”’ PrivÃ©e"}
                 </Text>
               </View>
             </Callout>
@@ -196,19 +196,19 @@ const loadAddresses = async () => {
         ))}
       </MapView>
 
-      {/* 🔴 Bouton Déconnexion */}
+      {/* ðŸ”´ Bouton DÃ©connexion */}
       <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Déconnexion</Text>
+        <Text style={styles.logoutText}>DÃ©connexion</Text>
       </TouchableOpacity>
 
-      {/* 🏠 Modale d’ajout */}
+      {/* ðŸ  Modale dâ€™ajout */}
       <Modal visible={modalVisible} transparent animationType="slide">
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.title}>Nouvelle adresse</Text>
 
             <TextInput
-              placeholder="Nom de l’adresse"
+              placeholder="Nom de lâ€™adresse"
               placeholderTextColor="#999"
               value={name}
               onChangeText={setName}
@@ -232,7 +232,7 @@ const loadAddresses = async () => {
             {image && (
               <View style={{ alignItems: "center", marginVertical: 8 }}>
                 <Image source={{ uri: image }} style={styles.preview} />
-                <Text>📸 Image sélectionnée</Text>
+                <Text>ðŸ“¸ Image sÃ©lectionnÃ©e</Text>
               </View>
             )}
 
@@ -245,7 +245,7 @@ const loadAddresses = async () => {
   );
 }
 
-// 💅 Styles
+// ðŸ’… Styles
 const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
@@ -292,3 +292,4 @@ const styles = StyleSheet.create({
   },
   preview: { width: 120, height: 120, borderRadius: 10, marginTop: 10 },
 });
+

@@ -63,31 +63,34 @@ export default function MapScreen() {
   }, [params?.latitude, params?.longitude]);
 
 // 🔹 Charge uniquement les adresses visibles pour l'utilisateur
+
 const loadAddresses = async () => {
   try {
-    const currentUser = auth.currentUser?.email;
-    console.log("👤 Utilisateur actuel :", currentUser); // 👈 ici
-
+    const currentUser = auth.currentUser?.email?.toLowerCase();
     if (!currentUser) return;
 
     const addressesRef = collection(db, "addresses");
 
-    // 🔍 On veut : (isPublic == true) OU (user == currentUser)
-    const q = query(
-      addressesRef,
-      or(
-        where("isPublic", "==", true),
-        where("user", "==", currentUser)
-      )
-    );
+    // 1) Publiques
+    const publicSnap = await getDocs(query(addressesRef, where("isPublic", "==", true)));
+    const publicData = publicSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-    const querySnapshot = await getDocs(q);
-    const data = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-    setMarkers(data);
+    // 2) Privées de l'utilisateur connecté
+    const privateSnap = await getDocs(query(addressesRef, where("user", "==", currentUser)));
+    const privateData = privateSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+    // 3) Fusion sans doublons
+    const combined = [
+      ...publicData,
+      ...privateData.filter(p => !publicData.find(pub => pub.id === p.id)),
+    ];
+
+    setMarkers(combined);
   } catch (error) {
     console.error("Erreur lors du chargement :", error);
   }
 };
+
 
   // 🔹 Clique sur la carte → prépare ajout d'adresse
   const handleAddMarker = (e: MapPressEvent) => {
@@ -127,15 +130,19 @@ const loadAddresses = async () => {
         imageUrl = await getDownloadURL(storageRef);
       }
 
-      await addDoc(collection(db, "addresses"), {
-        name,
-        description: desc,
-        latitude: selectedCoord.latitude,
-        longitude: selectedCoord.longitude,
-        imageUrl,
-        user: auth.currentUser?.email || "inconnu",
-        isPublic,
-      });
+     await addDoc(collection(db, "addresses"), {
+      name,
+      description: desc,
+      latitude: selectedCoord.latitude,
+      longitude: selectedCoord.longitude,
+      imageUrl,
+      // 👇 Toujours un email propre en minuscules
+      user: (auth.currentUser?.email || "inconnu").toLowerCase(),
+      // 👇 Toujours un booléen vrai/faux
+      isPublic: !!isPublic,
+      createdAt: new Date(),
+    });
+
 
       Alert.alert("Succès", "Adresse ajoutée !");
       setModalVisible(false);

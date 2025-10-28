@@ -23,7 +23,7 @@ export default function RootLayout() {
     if (initializing) return;
 
     if (user) {
-      router.replace("/(tabs)/home");
+      router.replace("/(tabs)/map");
     } else {
       router.replace("/");
     }
