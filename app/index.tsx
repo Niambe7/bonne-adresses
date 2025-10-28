@@ -31,6 +31,7 @@ export default function LoginScreen() {
   return (
     <View style={styles.container}>
     <TextInput
+      testID="login-email"
       placeholder="Email"
       placeholderTextColor="rgba(18, 17, 17, 1)" // 👈 gris clair visible en clair et sombre
       value={email}
@@ -40,6 +41,7 @@ export default function LoginScreen() {
     />
 
     <TextInput
+      testID="login-password"
       placeholder="Mot de passe"
       placeholderTextColor="rgba(6, 6, 6, 1)" // 👈 idem
       value={password}
@@ -47,7 +49,7 @@ export default function LoginScreen() {
       style={styles.input}
       secureTextEntry
     />
-      <Button title="Se connecter" onPress={handleLogin} color="#007bff" />
+      <Button testID="login-submit" title="Se connecter" onPress={handleLogin} color="#007bff" />
       <TouchableOpacity onPress={() => router.push("/register")}>
         <Text style={styles.link}>Pas de compte ? S'inscrire</Text>
       </TouchableOpacity>
