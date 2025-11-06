@@ -1,4 +1,4 @@
-// app/comments/[id].tsx
+ï»¿// app/comments/[id].tsx
 import React, { useEffect, useState } from "react";
 import { View, Text, FlatList, Image, StyleSheet, TouchableOpacity, Modal, TextInput, Alert, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -72,7 +72,7 @@ export default function CommentsScreen() {
       setRating("");
       setImage(null);
       load();
-      Alert.alert("Merci !", "Votre avis a été ajouté.");
+      Alert.alert("Merci !", "Votre avis a ï¿½tï¿½ ajoutï¿½.");
     } catch (e) {
       console.error("Erreur ajout avis:", e);
       Alert.alert("Erreur", "Impossible d'ajouter l'avis.");
@@ -82,7 +82,7 @@ export default function CommentsScreen() {
   return (
     <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
       <View style={styles.topbar}>
-        <TouchableOpacity onPress={() => router.back()}><Text style={styles.back}>? Retour</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => router.back()}><Text style={styles.back}>  Retour</Text></TouchableOpacity>
         <TouchableOpacity style={styles.addBtn} onPress={() => setModal(true)}><Text style={styles.addText}>Donner un avis</Text></TouchableOpacity>
       </View>
 

@@ -1,6 +1,6 @@
 // app/(tabs)/public-addresses.tsx
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, Image, StyleSheet, TouchableOpacity, Button, ActivityIndicator } from "react-native";
+import { View, Text, FlatList, Image, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import { collection, getDocs, query, where, getDoc, doc } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import { useRouter } from "expo-router";
@@ -11,6 +11,18 @@ export default function PublicAddresses() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  // Normalise certaines URL Storage mal formées (bucket .firebasestorage.app → .appspot.com)
+  const normalizeStorageUrl = (u?: string | null) => {
+    if (!u) return '';
+    try {
+      return String(u).replace('mes-bonnes-adresses-40217.firebasestorage.app', 'mes-bonnes-adresses-40217.appspot.com');
+    } catch {
+      return String(u);
+    }
+  };
+
+  
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -19,20 +31,24 @@ export default function PublicAddresses() {
         const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setAddresses(data);
         try {
-          const emails = Array.from(new Set(data.map((d: any) => String(d.user || '').toLowerCase()).filter(Boolean)));
+          const emails = Array.from(new Set(data.map((d: any) => String(d.user || '').toLowerCase().trim()).filter(Boolean)));
           const entries = await Promise.all(
             emails.map(async (e) => {
               try {
                 const s = await getDoc(doc(db, "users", e));
-                return [e, s.exists() ? (s.data() as any).avatarUrl || '' : ''];
-              } catch {
+                const url = s.exists() ? (s.data() as any).avatarUrl || '' : '';
+                return [e, normalizeStorageUrl(url)];
+              } catch (err) {
+                console.warn('avatar fetch error for', e, err);
                 return [e, ''];
-              } 
+              }
             })
           );
           const map: Record<string, string> = Object.fromEntries(entries);
           setAvatars(map);
-        } catch {}
+        } catch (e) {
+          console.warn('avatars build error', e);
+        }
       } catch (e) {
         console.error("Erreur chargement publiques:", e);
       } finally {
@@ -49,6 +65,8 @@ export default function PublicAddresses() {
         latitude: String(item.latitude),
         longitude: String(item.longitude),
         name: item.name,
+        imageUrl: item.imageUrl || '',
+        description: item.description || ''
       },
     });
   };
@@ -70,7 +88,18 @@ export default function PublicAddresses() {
             {item.imageUrl ? (
               <Image source={{ uri: item.imageUrl }} style={styles.image} />
             ) : null}
-            <View style={styles.headerRow}><Image source={{ uri: (avatars[String(item.user || "").toLowerCase()] || undefined) }} style={styles.avatar} /><Text style={styles.title}>{item.name}</Text></View>
+            <View style={styles.headerRow}>
+              {avatars[String(item.user || "").toLowerCase().trim()] ? (
+                <Image
+                  source={{ uri: normalizeStorageUrl(avatars[String(item.user || "").toLowerCase().trim()]) }}
+                  style={styles.avatar}
+                  onError={(e) => console.warn('avatar image error', item.user, e?.nativeEvent?.error)}
+                />
+              ) : (
+                <Image source={require("../../assets/images/icon.png")} style={styles.avatar} />
+              )}
+              <Text style={styles.title}>{item.name}</Text>
+            </View>
             {item.description ? <Text style={styles.desc}>{item.description}</Text> : null}
 
             <View style={styles.actions}>
@@ -114,6 +143,8 @@ const styles = StyleSheet.create({
   accent: { backgroundColor: "#28a745" },
   btnText: { color: "#fff", fontWeight: "600" },
 });
+
+
 
 
 

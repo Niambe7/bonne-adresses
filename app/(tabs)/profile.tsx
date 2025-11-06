@@ -52,10 +52,20 @@ export default function ProfileScreen() {
       const url = await getDownloadURL(storageRef);
       console.log('avatar: storage upload OK, url =', url);
       console.log('avatar: writing Firestore users doc for', email);
-      await setDoc(doc(db, "users", email), { avatarUrl: url, email }, { merge: true });
-      console.log('avatar: firestore write OK');
+      // use the email and uid already validated above
+      await setDoc(
+        doc(db, "users", email), // 👈 email normalisé
+        {
+          avatarUrl: url,
+          email: email, // 👈 champ aussi normalisé
+          uid: uid, // 👈 le champ que les règles vont vérifier
+        },
+        { merge: true }
+      );
+
+console.log('avatar: firestore write OK');
       setAvatarUrl(url);
-      Alert.alert("Profil", "Photo de profil mise � jour.");
+      Alert.alert("Profil", "Photo de profil mise � jour.");
     } catch (e) {
       console.error("Avatar save error:", e);
       Alert.alert("Erreur", "Impossible d'enregistrer la photo.");

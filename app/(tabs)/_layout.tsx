@@ -21,14 +21,35 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="profile"
+        name="public-addresses"
         options={{
-          title: "Profile",
+          title: "Publiques",
           tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="auto-stories" size={size} color={color} />
+            <MaterialIcons name="public" size={size} color={color} />
           ),
         }}
       />
+      <Tabs.Screen
+        name="private-addresses"
+        options={{
+          title: "Privées",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="lock" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: "Profil",
+          tabBarIcon: ({ color, size }) => (
+            <MaterialIcons name="person" size={size} color={color} />
+          ),
+        }}
+      />
+      {/* Masquer 'home' si présent */}
+      <Tabs.Screen name="home" options={{ href: null }} />
     </Tabs>
   );
 }
+

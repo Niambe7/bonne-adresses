@@ -12,7 +12,7 @@ import {
   Switch,
   Image,
 } from "react-native";
-import MapView, { Marker, MapPressEvent, LongPressEvent, Callout } from "react-native-maps";
+import MapView, { Marker, MapPressEvent, Callout } from "react-native-maps";
 import * as Location from "expo-location";
 import * as ImagePicker from "expo-image-picker";
 import { signOut } from "firebase/auth";
@@ -33,8 +33,6 @@ export default function MapScreen() {
   const [detailItem, setDetailItem] = useState<any | null>(null);
   const router = useRouter();
   const params = useLocalSearchParams<{ latitude?: string; longitude?: string; name?: string; imageUrl?: string; description?: string }>();
-
-  
 
   // 🔹 Récupère la position actuelle ou celle d'une adresse cliquée
   useEffect(() => {
@@ -115,7 +113,7 @@ const loadAddresses = async () => {
   };
 
   // Appui long: afficher les détails du marqueur le plus proche (si suffisamment proche)
-  const handleLongPress = (e: LongPressEvent) => {
+  const handleLongPress = (e: MapPressEvent) => {
     const { latitude, longitude } = e.nativeEvent.coordinate;
     if (!markers || markers.length === 0) return;
     const toRad = (deg: number) => (deg * Math.PI) / 180;
@@ -224,7 +222,6 @@ const saveAddress = async () => {
     }
 
     const userEmail = auth.currentUser?.email?.toLowerCase();
-    const userUid = auth.currentUser?.uid || null;
     await addDoc(collection(db, "addresses"), {
       name,
       description: desc,
@@ -232,7 +229,6 @@ const saveAddress = async () => {
       longitude: selectedCoord.longitude,
       imageUrl,
       user: userEmail,
-      uid: userUid,
       isPublic: !!isPublic,
       createdAt: new Date(),
     });
@@ -260,16 +256,9 @@ const saveAddress = async () => {
   return (
     <View style={styles.container}>
       {/* 🌍 Carte */}
-      <MapView
-        style={styles.map}
-        region={region}
-        onPress={handleAddMarker}
-        onLongPress={handleLongPress}
-        showsUserLocation
-      >
+      <MapView style={styles.map} region={region} onPress={handleAddMarker} onLongPress={handleLongPress}>
         {params?.latitude && params?.longitude && (
           <Marker
-            tracksViewChanges={true}
             identifier="focused-address"
             coordinate={{
               latitude: parseFloat(String(params.latitude)),
@@ -277,24 +266,14 @@ const saveAddress = async () => {
             }}
           >
             {params?.imageUrl ? (
-              <Image
-                source={{ uri: String(params.imageUrl) }}
-                style={styles.markerImage}
-                resizeMode="cover"
-                onError={(e) => console.warn('focused marker image error', e.nativeEvent?.error)}
-              />
+              <Image source={{ uri: String(params.imageUrl) }} style={styles.markerImage} />
             ) : (
               <Image source={require("../../assets/images/icon.png")} style={styles.markerImage} />
             )}
             <Callout>
               <View style={{ maxWidth: 180 }}>
                 {params?.imageUrl ? (
-                  <Image
-                    source={{ uri: String(params.imageUrl) }}
-                    style={styles.calloutImage}
-                    resizeMode="cover"
-                    onError={(e) => console.warn('focused callout image error', e.nativeEvent?.error)}
-                  />
+                  <Image source={{ uri: String(params.imageUrl) }} style={styles.calloutImage} />
                 ) : null}
                 {params?.name ? (
                   <Text style={{ fontWeight: "bold", marginTop: 6 }}>{String(params.name)}</Text>
@@ -306,7 +285,6 @@ const saveAddress = async () => {
         )}
         {markers.map((marker) => (
           <Marker
-            tracksViewChanges={true}
             key={marker.id}
             coordinate={{
               latitude: Number(marker.latitude),
@@ -316,10 +294,8 @@ const saveAddress = async () => {
             {/* 📸 Si image → photo à la place du pin */}
             {marker.imageUrl ? (
               <Image
-                source={{ uri: String(marker.imageUrl) }}
+                source={{ uri: marker.imageUrl }}
                 style={styles.markerImage}
-                resizeMode="cover"
-                onError={(e) => console.warn('marker image error', marker.id, e.nativeEvent?.error)}
               />
             ) : (
               <Image
@@ -330,15 +306,7 @@ const saveAddress = async () => {
 
             {/* 🏷️ Info-bulle au clic */}
             <Callout>
-              <View style={{ maxWidth: 180 }}>
-                {marker.imageUrl ? (
-                  <Image
-                    source={{ uri: String(marker.imageUrl) }}
-                    style={styles.calloutImage}
-                    resizeMode="cover"
-                    onError={(e) => console.warn('callout image error', marker.id, e.nativeEvent?.error)}
-                  />
-                ) : null}
+              <View style={{ maxWidth: 150 }}>
                 <Text style={{ fontWeight: "bold" }}>{marker.name}</Text>
                 <Text>{marker.description}</Text>
                 <Text style={{ fontStyle: "italic", color: "#555" }}>
@@ -395,21 +363,6 @@ const saveAddress = async () => {
           </View>
         </View>
       </Modal>
-      {/* Modal Détails (appui long) */}
-      <Modal visible={!!detailItem} transparent animationType="fade" onRequestClose={() => setDetailItem(null)}>
-        <View style={styles.modalContainer}>
-          <View style={styles.detailContent}>
-            {detailItem?.imageUrl ? (
-              <Image source={{ uri: String(detailItem.imageUrl) }} style={styles.detailImage} />
-            ) : null}
-            <Text style={styles.title}>{detailItem?.name || 'Adresse'}</Text>
-            {detailItem?.description ? <Text style={{ marginBottom: 10 }}>{detailItem.description}</Text> : null}
-            <Text style={{ color: '#666' }}>{detailItem?.isPublic ? 'Publique' : 'Privée'}</Text>
-            <View style={{ height: 10 }} />
-            <Button title="Fermer" onPress={() => setDetailItem(null)} />
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -429,7 +382,6 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 4,
   },
-  calloutImage: { width: 160, height: 100, borderRadius: 8, marginBottom: 6 },
   logoutBtn: {
     position: "absolute",
     top: 40,
@@ -451,12 +403,6 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 10,
   },
-  detailContent: {
-    width: "85%",
-    backgroundColor: "white",
-    padding: 16,
-    borderRadius: 10,
-  },
   title: { fontSize: 20, fontWeight: "bold", marginBottom: 15, textAlign: "center" },
   input: {
     borderWidth: 1,
@@ -467,6 +413,5 @@ const styles = StyleSheet.create({
     color: "black",
   },
   preview: { width: 120, height: 120, borderRadius: 10, marginTop: 10 },
-  detailImage: { width: '100%', height: 160, borderRadius: 10, marginBottom: 10 },
 });
 

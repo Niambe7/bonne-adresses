@@ -30,8 +30,8 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
+      <Text style={styles.title}>Good Place</Text>
     <TextInput
-      testID="login-email"
       placeholder="Email"
       placeholderTextColor="rgba(18, 17, 17, 1)" // 👈 gris clair visible en clair et sombre
       value={email}
@@ -41,7 +41,6 @@ export default function LoginScreen() {
     />
 
     <TextInput
-      testID="login-password"
       placeholder="Mot de passe"
       placeholderTextColor="rgba(6, 6, 6, 1)" // 👈 idem
       value={password}
@@ -49,7 +48,7 @@ export default function LoginScreen() {
       style={styles.input}
       secureTextEntry
     />
-      <Button testID="login-submit" title="Se connecter" onPress={handleLogin} color="#007bff" />
+      <Button title="Se connecter" onPress={handleLogin} color="#007bff" />
       <TouchableOpacity onPress={() => router.push("/register")}>
         <Text style={styles.link}>Pas de compte ? S'inscrire</Text>
       </TouchableOpacity>
@@ -75,5 +74,12 @@ const styles = StyleSheet.create({
     color: "#007bff",
     textAlign: "center",
     marginTop: 10,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#000',
   },
 });
